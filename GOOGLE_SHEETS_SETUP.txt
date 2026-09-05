@@ -1,0 +1,48 @@
+CARDScan AI - Google Sheets setup
+================================
+
+IMPORTANT
+This project keeps the existing Gemini scan, editable form, local Excel save/download, and adds ONE shared Google Sheet. Every card is appended as a NEW ROW in the same worksheet.
+
+A real Google service account cannot be created from this ZIP because it must be created inside YOUR Google Cloud account. The ZIP contains the complete authentication/integration code; you only need to create/download the credential once.
+
+STEP 1 - Google Cloud project
+1. Open Google Cloud Console.
+2. Create a project (example: CardScan AI).
+3. Enable Google Sheets API and Google Drive API for that project.
+
+STEP 2 - Create service account
+1. Go to IAM & Admin -> Service Accounts.
+2. Create a service account, e.g. cardscan-sheets.
+3. Open the service account -> Keys -> Add key -> Create new key -> JSON.
+4. Download the JSON.
+5. In this project create/open the credentials folder.
+6. Rename the downloaded file to service_account.json and put it here:
+   credentials/service_account.json
+
+STEP 3 - Create ONE Google Sheet
+1. Create a Google Sheet named: Business Cards Database
+2. Open it and copy its URL.
+3. Share the sheet with the service-account email address from the JSON file (the value ending in @...iam.gserviceaccount.com).
+4. Give Editor permission.
+
+STEP 4 - Configure .env
+Keep these values:
+GOOGLE_SHEET_NAME=Business Cards Database
+GOOGLE_WORKSHEET_NAME=Business Cards
+GOOGLE_SERVICE_ACCOUNT_FILE=credentials/service_account.json
+
+Recommended: paste your Google Sheet URL in GOOGLE_SHEET_URL.
+
+STEP 5 - Run
+Run RUN.bat. Scan a card, review/edit it, then click 'Save to Google Sheet'.
+
+RESULT
+Card 1 -> row 2
+Card 2 -> row 3
+Card 3 -> row 4
+...
+All cards stay in the SAME Google Sheet and SAME worksheet.
+
+SECURITY
+Never upload service_account.json to GitHub or send it to anyone. If exposed, revoke that service-account key in Google Cloud and create a new one.

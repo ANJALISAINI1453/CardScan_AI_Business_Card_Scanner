@@ -25,6 +25,7 @@ GOOGLE_SHEET_NAME = os.getenv("GOOGLE_SHEET_NAME", "Business Cards Database").st
 GOOGLE_WORKSHEET_NAME = os.getenv("GOOGLE_WORKSHEET_NAME", "Business Cards").strip()
 GOOGLE_SHEET_URL = os.getenv("GOOGLE_SHEET_URL", "").strip()
 SERVICE_ACCOUNT_FILE = BASE_DIR / os.getenv("GOOGLE_SERVICE_ACCOUNT_FILE", "credentials/service_account.json").strip()
+GOOGLE_SERVICE_ACCOUNT_JSON = os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON", "").strip()
 app = Flask(__name__)
 
 class BusinessCardData(BaseModel):
@@ -54,15 +55,31 @@ GOOGLE_SCOPES = [
 ]
 
 def google_sheets_configured():
-    return SERVICE_ACCOUNT_FILE.exists()
+    return bool(GOOGLE_SERVICE_ACCOUNT_JSON) or SERVICE_ACCOUNT_FILE.exists()
 
 def get_google_client():
-    if not SERVICE_ACCOUNT_FILE.exists():
-        raise RuntimeError(
-            f"Google service-account file not found: {SERVICE_ACCOUNT_FILE}. "
-            "Put your downloaded service_account.json inside the credentials folder."
+    if GOOGLE_SERVICE_ACCOUNT_JSON:
+        try:
+            service_account_info = json.loads(GOOGLE_SERVICE_ACCOUNT_JSON)
+        except json.JSONDecodeError:
+            raise RuntimeError("GOOGLE_SERVICE_ACCOUNT_JSON contains invalid JSON.")
+
+        creds = Credentials.from_service_account_info(
+            service_account_info,
+            scopes=GOOGLE_SCOPES
         )
-    creds = Credentials.from_service_account_file(str(SERVICE_ACCOUNT_FILE), scopes=GOOGLE_SCOPES)
+    else:
+        if not SERVICE_ACCOUNT_FILE.exists():
+            raise RuntimeError(
+                f"Google service-account file not found: {SERVICE_ACCOUNT_FILE}. "
+                "Put your downloaded service_account.json inside the credentials folder."
+            )
+
+        creds = Credentials.from_service_account_file(
+            str(SERVICE_ACCOUNT_FILE),
+            scopes=GOOGLE_SCOPES
+        )
+
     return gspread.authorize(creds)
 
 def get_google_worksheet():
@@ -256,5 +273,5 @@ def health():
 
 if __name__ == "__main__":
     ensure_excel()
-    print("\\nCardScan AI running at http://127.0.0.1:5000\\n")
+    print("\nCardScan AI running at http://127.0.0.1:5000\n")
     app.run(host="127.0.0.1", port=5000, debug=True)

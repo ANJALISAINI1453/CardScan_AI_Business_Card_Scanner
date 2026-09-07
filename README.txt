@@ -8,3 +8,7 @@ CardScan AI - Business Card Scanner
 6. Scan -> review/edit -> Save to Google Sheet.
 
 Every saved card is appended as a new row in ONE Google Sheet. Local Excel save/download remains available too.
+
+
+
+

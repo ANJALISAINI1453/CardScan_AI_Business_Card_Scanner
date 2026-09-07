@@ -309,13 +309,10 @@
             <div>
                 <div class="logo">Card<span>Scan</span> AI</div>
                 <div class="sub">
-                    Business Card → AI Extraction → Excel + Google Sheet
+                    Business Card → AI Extraction → Google Sheet
                 </div>
             </div>
 
-            <button class="btn download" onclick="location.href='/download'">
-                ⬇ Download Excel
-            </button>
         </div>
 
         <div class="grid">
@@ -436,7 +433,7 @@
                     </div>
 
                     <div>
-                        <label>PHONE</label>
+                        <label>MOBILE</label>
                         <input id="phone">
                     </div>
 
@@ -471,11 +468,6 @@
                     </div>
 
                     <div>
-                        <label>DISTRICT</label>
-                        <input id="district">
-                    </div>
-
-                    <div>
                         <label>STATE</label>
                         <input id="state">
                     </div>
@@ -496,18 +488,6 @@
 
                 <div class="row">
 
-                    <button
-                        class="btn"
-                        style="background:#e8eef8"
-                        onclick="clearAll()">
-                        Clear
-                    </button>
-
-                    <button
-                        class="btn save"
-                        onclick="save()">
-                        💾 Save to Excel
-                    </button>
 
                 </div>
 
@@ -539,7 +519,6 @@
             "website",
             "street_address",
             "locality",
-            "district",
             "state",
             "pin",
             "owner_details",
@@ -888,6 +867,45 @@
 
                     });
 
+                    // Normalize mobile/alternate phone values after AI extraction.
+                    // Mobile: keep a country code exactly as extracted; otherwise keep
+                    // only the actual 10-digit number.
+                    // Alternate: prefer a valid 10-digit number; if there is no
+                    // valid 10-digit number, keep the other number-like value as-is.
+                    const normalizePhoneValue = (value, allowOtherNumber = false) => {
+                        const raw = String(value || "").trim();
+                        if (!raw) return "";
+
+                        const digits = raw.replace(/\D/g, "");
+                        const last10 = digits.slice(-10);
+                        const hasValid10Digit = /^\d{10}$/.test(last10);
+
+                        if (hasValid10Digit) {
+                            // If a country code is present, preserve the extracted
+                            // value exactly as it appeared on the card.
+                            const startsWithCountryCode =
+                                raw.startsWith("+") ||
+                                raw.startsWith("00") ||
+                                (digits.length > 10 && digits.length <= 15);
+
+                            return startsWithCountryCode ? raw : last10;
+                        }
+
+                        // Alternate phone can contain non-standard number-like text
+                        // such as 93|20|9569 when no proper 10-digit number exists.
+                        if (allowOtherNumber && /\d/.test(raw)) {
+                            return raw;
+                        }
+
+                        return "";
+                    };
+
+                    $("phone").value =
+                        normalizePhoneValue(x.data.phone, false);
+
+                    $("alternate_phone").value =
+                        normalizePhoneValue(x.data.alternate_phone, true);
+
                     $("time").textContent =
                         x.scan_datetime || "—";
 
@@ -913,59 +931,6 @@
                     b.disabled = false;
 
                     b.textContent = "🔍 Scan Card";
-
-                });
-        }
-
-
-        /* =========================================================
-           SAVE TO EXCEL
-        ========================================================= */
-
-        function save() {
-
-            let p = {};
-
-            fields.forEach(k => {
-                p[k] = $(k).value;
-            });
-
-            p.scan_datetime =
-                $("scan_datetime").value;
-
-            fetch("/save", {
-
-                method: "POST",
-
-                headers: {
-                    "Content-Type": "application/json"
-                },
-
-                body: JSON.stringify(p)
-
-            })
-                .then(async r => {
-
-                    let x = await r.json();
-
-                    if (!r.ok || !x.success) {
-                        throw Error(
-                            x.error || "Save failed"
-                        );
-                    }
-
-                    msg(
-                        "✓ Saved to Business_Cards.xlsx",
-                        "ok"
-                    );
-
-                })
-                .catch(e => {
-
-                    msg(
-                        "❌ " + e.message,
-                        "error"
-                    );
 
                 });
         }
@@ -1017,6 +982,9 @@
                         "✓ Saved to the same Google Sheet successfully.",
                         "ok"
                     );
+
+                    // Clear the form ONLY after Google Sheet save succeeds.
+                    clearAll();
 
                     if (x.sheet_url) {
                         console.log(
